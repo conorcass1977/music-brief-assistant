@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Brief Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+            background-color: #fafafa;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            background-color: white;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .results-container {
+            margin-top: 30px;
+            padding: 24px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            display: none;
+        }
+
+        .results-container.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results-title {
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .result-item {
+            margin-bottom: 16px;
+        }
+
+        .result-label {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-value {
+            color: #333;
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Music Brief Assistant</h1>
+        <form id="musicBriefForm">
+            <div class="form-group">
+                <label for="videoTitle">Video Title</label>
+                <input type="text" id="videoTitle" name="videoTitle" placeholder="Enter video title" required>
+            </div>
+
+            <div class="form-group">
+                <label for="videoDescription">Video Description</label>
+                <textarea id="videoDescription" name="videoDescription" placeholder="Describe your video content, style, and any specific requirements..." required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="desiredMood">Desired Mood</label>
+                <select id="desiredMood" name="desiredMood" required>
+                    <option value="">Select a mood</option>
+                    <option value="Upbeat">Upbeat</option>
+                    <option value="Calm">Calm</option>
+                    <option value="Energetic">Energetic</option>
+                    <option value="Emotional">Emotional</option>
+                    <option value="Corporate">Corporate</option>
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn">Submit Brief</button>
+        </form>
+
+        <div id="resultsContainer" class="results-container">
+            <h2 class="results-title">Submitted Brief</h2>
+            <div class="result-item">
+                <div class="result-label">Video Title</div>
+                <div class="result-value" id="resultTitle"></div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">Video Description</div>
+                <div class="result-value" id="resultDescription"></div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">Desired Mood</div>
+                <div class="result-value" id="resultMood"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('musicBriefForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Collect form data
+            const videoTitle = document.getElementById('videoTitle').value;
+            const videoDescription = document.getElementById('videoDescription').value;
+            const desiredMood = document.getElementById('desiredMood').value;
+            
+            // Display the collected data
+            document.getElementById('resultTitle').textContent = videoTitle;
+            document.getElementById('resultDescription').textContent = videoDescription;
+            document.getElementById('resultMood').textContent = desiredMood;
+            
+            // Show the results container
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.classList.add('show');
+            
+            // Scroll to results for better UX
+            resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            // Clear the form
+            document.getElementById('musicBriefForm').reset();
+        });
+    </script>
+</body>
+</html>
