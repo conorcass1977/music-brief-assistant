@@ -123,6 +123,30 @@
             transform: translateY(0);
         }
 
+        .clear-btn {
+            width: 100%;
+            padding: 10px;
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 12px;
+        }
+
+        .clear-btn:hover {
+            background: #e9ecef;
+            border-color: #ccc;
+            color: #333;
+        }
+
+        .clear-btn:active {
+            transform: translateY(1px);
+        }
+
         .results-container {
             margin-top: 30px;
             padding: 24px;
@@ -211,6 +235,8 @@
                 </select>
             </div>
 
+            <button type="button" class="clear-btn" id="clearBtn">Clear Form</button>
+
             <button type="submit" class="submit-btn">Submit Brief</button>
         </form>
 
@@ -263,6 +289,12 @@
         
         // Initialize counters on page load
         updateCounters();
+
+        // Clear form functionality
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('musicBriefForm').reset();
+            updateCounters();
+        });
 
         // Form submission
         document.getElementById('musicBriefForm').addEventListener('submit', function(e) {
