@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Brief Assistant V2</title>
+    <title>Music Brief Assistant</title>
     <style>
         * {
             margin: 0;
@@ -74,6 +74,14 @@
         textarea {
             resize: vertical;
             min-height: 120px;
+        }
+
+        .word-counter {
+            margin-top: 8px;
+            color: #999;
+            font-size: 13px;
+            text-align: right;
+            font-style: italic;
         }
 
         .submit-btn {
@@ -169,6 +177,7 @@
             <div class="form-group">
                 <label for="videoDescription">Video Description</label>
                 <textarea id="videoDescription" name="videoDescription" placeholder="Describe your video content, style, and any specific requirements..." required></textarea>
+                <div class="word-counter" id="wordCounter">Word count: 0</div>
             </div>
 
             <div class="form-group">
@@ -204,17 +213,34 @@
     </div>
 
     <script>
+        // Word counter functionality
+        const videoDescription = document.getElementById('videoDescription');
+        const wordCounter = document.getElementById('wordCounter');
+
+        function updateWordCount() {
+            const text = videoDescription.value.trim();
+            const wordCount = text === '' ? 0 : text.split(/\s+/).filter(word => word.length > 0).length;
+            wordCounter.textContent = `Word count: ${wordCount}`;
+        }
+
+        // Update word count in real-time as user types
+        videoDescription.addEventListener('input', updateWordCount);
+        
+        // Initialize word count on page load
+        updateWordCount();
+
+        // Form submission
         document.getElementById('musicBriefForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             // Collect form data
             const videoTitle = document.getElementById('videoTitle').value;
-            const videoDescription = document.getElementById('videoDescription').value;
+            const videoDescriptionValue = videoDescription.value;
             const desiredMood = document.getElementById('desiredMood').value;
             
             // Display the collected data
             document.getElementById('resultTitle').textContent = videoTitle;
-            document.getElementById('resultDescription').textContent = videoDescription;
+            document.getElementById('resultDescription').textContent = videoDescriptionValue;
             document.getElementById('resultMood').textContent = desiredMood;
             
             // Show the results container
@@ -226,6 +252,9 @@
             
             // Clear the form
             document.getElementById('musicBriefForm').reset();
+            
+            // Reset word count after form is cleared
+            updateWordCount();
         });
     </script>
 </body>
