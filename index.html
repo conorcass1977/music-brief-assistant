@@ -76,12 +76,28 @@
             min-height: 120px;
         }
 
-        .word-counter {
+        .counters-container {
             margin-top: 8px;
-            color: #999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 13px;
-            text-align: right;
+        }
+
+        .word-counter {
+            color: #999;
             font-style: italic;
+        }
+
+        .character-counter {
+            color: #999;
+            font-style: italic;
+            transition: color 0.3s ease;
+        }
+
+        .character-counter.over-limit {
+            color: #e74c3c;
+            font-weight: 600;
         }
 
         .submit-btn {
@@ -177,7 +193,10 @@
             <div class="form-group">
                 <label for="videoDescription">Video Description</label>
                 <textarea id="videoDescription" name="videoDescription" placeholder="Describe your video content, style, and any specific requirements..." required></textarea>
-                <div class="word-counter" id="wordCounter">Word count: 0</div>
+                <div class="counters-container">
+                    <div class="word-counter" id="wordCounter">Word count: 0</div>
+                    <div class="character-counter" id="characterCounter">Characters: 0 / 500</div>
+                </div>
             </div>
 
             <div class="form-group">
@@ -213,21 +232,37 @@
     </div>
 
     <script>
-        // Word counter functionality
+        // Word and character counter functionality
         const videoDescription = document.getElementById('videoDescription');
         const wordCounter = document.getElementById('wordCounter');
+        const characterCounter = document.getElementById('characterCounter');
+        const maxCharacters = 500;
 
-        function updateWordCount() {
-            const text = videoDescription.value.trim();
-            const wordCount = text === '' ? 0 : text.split(/\s+/).filter(word => word.length > 0).length;
+        function updateCounters() {
+            const text = videoDescription.value;
+            
+            // Update word count
+            const trimmedText = text.trim();
+            const wordCount = trimmedText === '' ? 0 : trimmedText.split(/\s+/).filter(word => word.length > 0).length;
             wordCounter.textContent = `Word count: ${wordCount}`;
+            
+            // Update character count
+            const charCount = text.length;
+            characterCounter.textContent = `Characters: ${charCount} / ${maxCharacters}`;
+            
+            // Change color to red if over limit
+            if (charCount > maxCharacters) {
+                characterCounter.classList.add('over-limit');
+            } else {
+                characterCounter.classList.remove('over-limit');
+            }
         }
 
-        // Update word count in real-time as user types
-        videoDescription.addEventListener('input', updateWordCount);
+        // Update counters in real-time as user types
+        videoDescription.addEventListener('input', updateCounters);
         
-        // Initialize word count on page load
-        updateWordCount();
+        // Initialize counters on page load
+        updateCounters();
 
         // Form submission
         document.getElementById('musicBriefForm').addEventListener('submit', function(e) {
@@ -253,8 +288,8 @@
             // Clear the form
             document.getElementById('musicBriefForm').reset();
             
-            // Reset word count after form is cleared
-            updateWordCount();
+            // Reset counters after form is cleared
+            updateCounters();
         });
     </script>
 </body>
