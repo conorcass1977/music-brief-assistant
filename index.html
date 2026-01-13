@@ -203,6 +203,117 @@
             border-radius: 6px;
             border-left: 3px solid #667eea;
         }
+
+        .previous-briefs-container {
+            margin-top: 30px;
+            padding: 24px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            display: none;
+        }
+
+        .previous-briefs-container.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .previous-briefs-title {
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .brief-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .brief-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .brief-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .brief-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .brief-mood {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .brief-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .brief-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .brief-timestamp {
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .delete-btn {
+            padding: 6px 12px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: translateY(-1px);
+        }
+
+        .delete-btn:active {
+            transform: translateY(0);
+        }
+
+        .no-briefs {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -255,6 +366,11 @@
                 <div class="result-value" id="resultMood"></div>
             </div>
         </div>
+
+        <div id="previousBriefsContainer" class="previous-briefs-container">
+            <h2 class="previous-briefs-title">Previous Briefs</h2>
+            <div id="previousBriefsList"></div>
+        </div>
     </div>
 
     <script>
@@ -296,6 +412,91 @@
             updateCounters();
         });
 
+        // LocalStorage functions for briefs
+        const STORAGE_KEY = 'musicBriefs';
+
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            };
+            return date.toLocaleString('en-US', options);
+        }
+
+        function getBriefs() {
+            const briefsJson = localStorage.getItem(STORAGE_KEY);
+            return briefsJson ? JSON.parse(briefsJson) : [];
+        }
+
+        function saveBrief(brief) {
+            const briefs = getBriefs();
+            briefs.unshift(brief); // Add to beginning of array (newest first)
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(briefs));
+        }
+
+        function deleteBrief(id) {
+            const briefs = getBriefs();
+            const filteredBriefs = briefs.filter(brief => brief.id !== id);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredBriefs));
+            displayPreviousBriefs();
+        }
+
+        function truncateDescription(description, maxLength = 100) {
+            if (description.length <= maxLength) {
+                return description;
+            }
+            return description.substring(0, maxLength) + '...';
+        }
+
+        function displayPreviousBriefs() {
+            const briefs = getBriefs();
+            const previousBriefsList = document.getElementById('previousBriefsList');
+            const previousBriefsContainer = document.getElementById('previousBriefsContainer');
+
+            if (briefs.length === 0) {
+                previousBriefsList.innerHTML = '<div class="no-briefs">No previous briefs saved yet.</div>';
+                previousBriefsContainer.classList.remove('show');
+                return;
+            }
+
+            previousBriefsContainer.classList.add('show');
+            previousBriefsList.innerHTML = briefs.map(brief => `
+                <div class="brief-card">
+                    <div class="brief-header">
+                        <div>
+                            <div class="brief-title">${escapeHtml(brief.videoTitle)}</div>
+                            <span class="brief-mood">${escapeHtml(brief.desiredMood)}</span>
+                        </div>
+                    </div>
+                    <div class="brief-description">${escapeHtml(truncateDescription(brief.videoDescription))}</div>
+                    <div class="brief-footer">
+                        <div class="brief-timestamp">${formatTimestamp(brief.timestamp)}</div>
+                        <button class="delete-btn" onclick="deleteBriefById('${brief.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Make deleteBriefById available globally for onclick handlers
+        window.deleteBriefById = function(id) {
+            deleteBrief(id);
+        };
+
         // Form submission
         document.getElementById('musicBriefForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -314,6 +515,19 @@
             const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.classList.add('show');
             
+            // Save to localStorage
+            const brief = {
+                id: generateUniqueId(),
+                videoTitle: videoTitle,
+                videoDescription: videoDescriptionValue,
+                desiredMood: desiredMood,
+                timestamp: Date.now()
+            };
+            saveBrief(brief);
+            
+            // Display previous briefs
+            displayPreviousBriefs();
+            
             // Scroll to results for better UX
             resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             
@@ -323,6 +537,9 @@
             // Reset counters after form is cleared
             updateCounters();
         });
+
+        // Load previous briefs on page load
+        displayPreviousBriefs();
     </script>
 </body>
 </html>
