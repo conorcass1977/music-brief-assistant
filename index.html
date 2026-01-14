@@ -123,6 +123,17 @@
             transform: translateY(0);
         }
 
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .submit-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
         .clear-btn {
             width: 100%;
             padding: 10px;
@@ -314,7 +325,30 @@
             font-style: italic;
             padding: 20px;
         }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #fcc;
+            margin-top: 12px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-style: italic;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
@@ -412,12 +446,10 @@
             updateCounters();
         });
 
-        // LocalStorage functions for briefs
-        const STORAGE_KEY = 'musicBriefs';
-
-        function generateUniqueId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
-        }
+        // Initialize Supabase client
+        const supabaseUrl = 'https://ceoxwxltgxzyhvqsstlf.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlb3h3eGx0Z3h6eWh2cXNzdGxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MTE1NzUsImV4cCI6MjA4Mzk4NzU3NX0.MdsOY-q-aucRUpZP-SSALeW8YaNl4na22Ptgrorw9ow';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -432,22 +464,69 @@
             return date.toLocaleString('en-US', options);
         }
 
-        function getBriefs() {
-            const briefsJson = localStorage.getItem(STORAGE_KEY);
-            return briefsJson ? JSON.parse(briefsJson) : [];
+        function showError(message, container) {
+            let errorDiv = container.querySelector('.error-message');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                container.appendChild(errorDiv);
+            }
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
         }
 
-        function saveBrief(brief) {
-            const briefs = getBriefs();
-            briefs.unshift(brief); // Add to beginning of array (newest first)
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(briefs));
+        async function getBriefs() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('briefs')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Error fetching briefs:', error);
+                throw error;
+            }
         }
 
-        function deleteBrief(id) {
-            const briefs = getBriefs();
-            const filteredBriefs = briefs.filter(brief => brief.id !== id);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredBriefs));
-            displayPreviousBriefs();
+        async function saveBrief(videoTitle, videoDescription, mood) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('briefs')
+                    .insert([
+                        {
+                            video_title: videoTitle,
+                            video_description: videoDescription,
+                            mood: mood
+                        }
+                    ])
+                    .select();
+
+                if (error) throw error;
+                return data[0];
+            } catch (error) {
+                console.error('Error saving brief:', error);
+                throw error;
+            }
+        }
+
+        async function deleteBrief(id) {
+            try {
+                const { error } = await supabaseClient
+                    .from('briefs')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                await displayPreviousBriefs();
+            } catch (error) {
+                console.error('Error deleting brief:', error);
+                throw error;
+            }
         }
 
         function truncateDescription(description, maxLength = 100) {
@@ -457,33 +536,42 @@
             return description.substring(0, maxLength) + '...';
         }
 
-        function displayPreviousBriefs() {
-            const briefs = getBriefs();
+        async function displayPreviousBriefs() {
             const previousBriefsList = document.getElementById('previousBriefsList');
             const previousBriefsContainer = document.getElementById('previousBriefsContainer');
 
-            if (briefs.length === 0) {
-                previousBriefsList.innerHTML = '<div class="no-briefs">No previous briefs saved yet.</div>';
-                previousBriefsContainer.classList.remove('show');
-                return;
-            }
+            // Show loading state
+            previousBriefsList.innerHTML = '<div class="loading">Loading briefs...</div>';
 
-            previousBriefsContainer.classList.add('show');
-            previousBriefsList.innerHTML = briefs.map(brief => `
-                <div class="brief-card">
-                    <div class="brief-header">
-                        <div>
-                            <div class="brief-title">${escapeHtml(brief.videoTitle)}</div>
-                            <span class="brief-mood">${escapeHtml(brief.desiredMood)}</span>
+            try {
+                const briefs = await getBriefs();
+
+                if (briefs.length === 0) {
+                    previousBriefsList.innerHTML = '<div class="no-briefs">No previous briefs saved yet.</div>';
+                    previousBriefsContainer.classList.remove('show');
+                    return;
+                }
+
+                previousBriefsContainer.classList.add('show');
+                previousBriefsList.innerHTML = briefs.map(brief => `
+                    <div class="brief-card">
+                        <div class="brief-header">
+                            <div>
+                                <div class="brief-title">${escapeHtml(brief.video_title)}</div>
+                                <span class="brief-mood">${escapeHtml(brief.mood)}</span>
+                            </div>
+                        </div>
+                        <div class="brief-description">${escapeHtml(truncateDescription(brief.video_description))}</div>
+                        <div class="brief-footer">
+                            <div class="brief-timestamp">${formatTimestamp(brief.created_at)}</div>
+                            <button class="delete-btn" onclick="deleteBriefById('${brief.id}')">Delete</button>
                         </div>
                     </div>
-                    <div class="brief-description">${escapeHtml(truncateDescription(brief.videoDescription))}</div>
-                    <div class="brief-footer">
-                        <div class="brief-timestamp">${formatTimestamp(brief.timestamp)}</div>
-                        <button class="delete-btn" onclick="deleteBriefById('${brief.id}')">Delete</button>
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+            } catch (error) {
+                previousBriefsList.innerHTML = '<div class="no-briefs">Error loading briefs. Please try again.</div>';
+                showError('Failed to load briefs. Please refresh the page.', previousBriefsContainer);
+            }
         }
 
         function escapeHtml(text) {
@@ -493,12 +581,17 @@
         }
 
         // Make deleteBriefById available globally for onclick handlers
-        window.deleteBriefById = function(id) {
-            deleteBrief(id);
+        window.deleteBriefById = async function(id) {
+            const previousBriefsContainer = document.getElementById('previousBriefsContainer');
+            try {
+                await deleteBrief(id);
+            } catch (error) {
+                showError('Failed to delete brief. Please try again.', previousBriefsContainer);
+            }
         };
 
         // Form submission
-        document.getElementById('musicBriefForm').addEventListener('submit', function(e) {
+        document.getElementById('musicBriefForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             // Collect form data
@@ -515,31 +608,41 @@
             const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.classList.add('show');
             
-            // Save to localStorage
-            const brief = {
-                id: generateUniqueId(),
-                videoTitle: videoTitle,
-                videoDescription: videoDescriptionValue,
-                desiredMood: desiredMood,
-                timestamp: Date.now()
-            };
-            saveBrief(brief);
+            // Disable submit button during save
+            const submitBtn = document.querySelector('.submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
             
-            // Display previous briefs
-            displayPreviousBriefs();
-            
-            // Scroll to results for better UX
-            resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            
-            // Clear the form
-            document.getElementById('musicBriefForm').reset();
-            
-            // Reset counters after form is cleared
-            updateCounters();
+            try {
+                // Save to Supabase
+                await saveBrief(videoTitle, videoDescriptionValue, desiredMood);
+                
+                // Display previous briefs
+                await displayPreviousBriefs();
+                
+                // Scroll to results for better UX
+                resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // Clear the form
+                document.getElementById('musicBriefForm').reset();
+                
+                // Reset counters after form is cleared
+                updateCounters();
+            } catch (error) {
+                showError('Failed to save brief. Please try again.', resultsContainer);
+                console.error('Error saving brief:', error);
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         });
 
         // Load previous briefs on page load
-        displayPreviousBriefs();
+        displayPreviousBriefs().catch(error => {
+            console.error('Error loading briefs on page load:', error);
+        });
     </script>
 </body>
 </html>
